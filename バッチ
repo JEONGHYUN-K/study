@@ -1,0 +1,35 @@
+#バッチ処理とは
+複数のSQL命令を事前にメモリに蓄積し、一括でデータベースに送信・実行する処理方式です。
+
+##主要メソッド
+addBatch() → クエリをメモリ上のバッチリストに追加する
+executeBatch() → 追加されたSQLをまとめて一括実行する
+clearBatch() → バッチリストを初期化する
+rollback() → データベースなどで行われた変更をある地点まで元に戻す操作
+
+##PreparedStatement 使用例
+
+String sql = "INSERT INTO users (name, age) VALUES (?, ?)";
+
+try (Connection conn = DriverManager.getConnection(url, user, pw);
+PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+conn.setAutoCommit(false);  // 自動コミットを無効化
+
+for (int i = 1; i <= 1000; i++) {
+    pstmt.setString(1, "名前" + i);
+    pstmt.setInt(2, 20 + (i % 10));
+    pstmt.addBatch();  // クエリをバッチに追加
+
+    if (i % 100 == 0) {
+        pstmt.executeBatch();  // バッチ実行
+        pstmt.clearBatch();    // バッチ初期化
+    }
+}
+
+pstmt.executeBatch();  // 残りを実行
+conn.commit();         // 正常終了時にコミット
+} catch (SQLException e) {
+conn.rollback(); // 例外発生時にロールバック   
+e.printStackTrace();
+}
